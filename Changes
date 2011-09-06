@@ -1,0 +1,13 @@
+Revision history for Perl module DBIx::Array::Connect
+
+0.02 2011-09-05
+  - Added class method
+  - Default to DBIx::Array instead of DBIx::Array::Export
+  - Updated path method to always return an array ref
+  - Updated minimum package requirements for DBIx::Array 0.14
+  - Added t/003_class.t
+  - Updated documentation
+  - First release to CPAN
+
+0.01 2011-09-05
+  - original version; created by ExtUtils::ModuleMaker 0.51

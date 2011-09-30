@@ -5,16 +5,16 @@ use base qw{Package::New};
 use Config::IniFiles qw{};
 use Path::Class qw{};
 
-our $VERSION='0.02';
+our $VERSION='0.03';
 
 =head1 NAME
 
-DBIx::Array::Connect - Database connections from a configuration file
+DBIx::Array::Connect - Database Connections from an INI Configuration File
 
 =head1 SYNOPSIS
 
   use DBIx::Array::Connect;
-  my $dbx=DBIx::Array::Connect->new->connect("mydatabase");  #isa DBIx::Array
+  my $dbx=DBIx::Array::Connect->new->connect("mydatabase"); #isa DBIx::Array
 
   my $dac=DBIx::Array::Connect->new(file=>"./my.ini");      #isa DBIx::Array::Connect
   my $dbx=$dac->connect("mydatabase");                      #isa DBIx::Array
@@ -23,11 +23,13 @@ DBIx::Array::Connect - Database connections from a configuration file
 
 Provides an easy way to construct database objects and connect to databases while providing an easy way to centralize management of database connection strings.
 
-This package reads database connection information from an INI formatted configuration file.
+This package reads database connection information from an INI formatted configuration file and returns a connected database object.
+
+This module is used to connect to both Oracle 10g and 11g using L<DBD::Oracle> on both Linux and Win32, MySQL 4 and 5 using L<DBD::mysql> on Linux, and Microsoft SQL Server using L<DBD::Sybase> on Linux and using L<DBD::ODBC> on Win32 systems in a 24x7 production environment.
 
 =head1 USAGE
 
-Create an INI configuration file with the following format.  The default location for the INI file is /etc/database-connetions-config.ini on Linux-like systems and C:\Windows\database-connetions-config.ini on Windows-like systems.
+Create an INI configuration file with the following format.  The default location for the INI file is /etc/database-connections-config.ini on Linux-like systems and C:\Windows\database-connections-config.ini on Windows-like systems.
 
   [mydatabase]
   connection=DBI:mysql:database=mydb;host=myhost.mydomain.tld
@@ -38,6 +40,7 @@ Create an INI configuration file with the following format.  The default locatio
 Connect to the database.
 
   my $dbx=DBIx::Array::Connect->new->connect("mydatabase"); #isa DBIx::Array
+  my $dbh=$dbx->dbh; #if you don't want to use DBIx::Array...
 
 Use the L<DBIx::Array> object like you normally would.
 
@@ -45,16 +48,16 @@ Use the L<DBIx::Array> object like you normally would.
 
 =head2 new
 
-  my $dac=DBIx::Array::Connect->new;                      #Defaults
-  my $dac=DBIx::Array::Connect->new(file=>"path/my.ini"); #Override the INI location
+  my $dac=DBIx::Array::Connect->new;                        #Defaults
+  my $dac=DBIx::Array::Connect->new(file=>"path/my.ini");   #Override the INI location
 
 =head1 METHODS
 
 =head2 connect
 
-Returns a database object for the named database.
+Returns a database object for the database nickname which is an INI section name.
 
-  my $dbx=$dac->connect($name);               #isa DBIx::Array
+  my $dbx=$dac->connect($nickname);                         #isa DBIx::Array
 
   my %overrides=(
                  connection => $connection,
@@ -63,36 +66,36 @@ Returns a database object for the named database.
                  options    => {},
                  execute    => [],
                 );
-  my $dbx=$dac->connect($name, \%overrides);  #isa DBIx::Array
+  my $dbx=$dac->connect($nickname, \%overrides);            #isa DBIx::Array
 
 =cut
 
 sub connect {
   my $self=shift;
-  my $database=shift or die("Error: connect method requires name parameter.");
+  my $nickname=shift or die("Error: connect method requires a database nickname parameter.");
   my $override=shift;
   $override={} unless ref($override) eq "HASH";
-  my $connection= $override->{"connection"} || $self->cfg->val($database, "connection")
-            or die(qq{Error: connection not defined for database "$database"});
-  my $user      = $override->{"user"}       || $self->cfg->val($database, "user",     "");
-  my $password  = $override->{"password"}   || $self->cfg->val($database, "password", "");
+  my $connection= $override->{"connection"} || $self->cfg->val($nickname, "connection")
+            or die(qq{Error: connection not defined for nickname "$nickname"});
+  my $user      = $override->{"user"}       || $self->cfg->val($nickname, "user",     "");
+  my $password  = $override->{"password"}   || $self->cfg->val($nickname, "password", "");
   my %options=();
   if (ref($override->{"options"}) eq "HASH") {
     %options=%{$override->{"options"}};
   } else {
-    my $options=$self->cfg->val($database, "options", "");
+    my $options=$self->cfg->val($nickname, "options", "");
     %options=map {s/^\s*//;s/\s*$//;$_} split(/[,=>]+/, $options);
   }
   my $class=$self->class;
   eval("use $class");
-  my $dbx=$class->new(name=>$database);
+  my $dbx=$class->new(name=>$nickname);
   $dbx->connect($connection, $user, $password, \%options);
   if ($dbx->can("execute")) {
     my @execute=();
     if (ref($override->{"execute"}) eq "ARRAY") {
       @execute=@{$override->{"execute"}};
     } else {
-      @execute=grep {defined && length} $self->cfg->val($database, "execute");
+      @execute=grep {defined && length} $self->cfg->val($nickname, "execute");
     }
     $dbx->execute($_) foreach @execute;
   }
@@ -111,7 +114,7 @@ Note: active=1 is assumed active=0 is inactive
 
 Example:
 
-  my @dbx=map {$dac->connect($_)} $dac->sections("db");  #connect to all active databases of type db
+  my @dbx=map {$dac->connect($_)} $dac->sections("db");     #Connect to all active databases of type db
 
 =cut
 
@@ -128,7 +131,11 @@ sub sections {
 Returns the class in to which to bless objects.  The "class" is assumed to be a base DBIx::Array object.  This package MAY work with other objects that have a connect method that pass directly to DBI->connect.  The object must have a similar execute method to support the package's execute on connect capability.
 
   my $class=$dac->class; #$
-  $dac->class("DBIx::Array::Export"); #If you want the exports features
+  $dac->class("DBIx::Array::Export"); #If you want the exports features of DBIx::Array
+
+Set on construction
+
+  my $dac=DBIx::Array::Connect->new(class=>"DBIx::Array::Export");
 
 =cut
 
@@ -141,7 +148,7 @@ sub class {
 
 =head2 file
 
-Sets or returns the profile INI file name
+Sets or returns the profile INI filename
 
   my $file=$dac->file;
   my $file=$dac->file("./my.ini");
@@ -181,13 +188,12 @@ Sets and returns a list of search paths for the INI file.
   my $path=$dac->path(".", ".."); # []
 
 Default: ["/etc"] on Linux-like systems
-Default: ['C:\Windows'] on Windows like systems
+Default: ['C:\Windows'] on Windows-like systems
 
-Overloading path name is a good way to migrate from one location to another over time.
+Overloading path is a good way to migrate from one location to another over time.
 
   package My::Connect;
   use base qw{DBIx::Array::Connect};
-  use Path::Class qw{};
   sub path {[".", "..", "/etc", "/home"]};
 
 Put INI file in the same folder as tnsnames.ora file.
@@ -195,7 +201,7 @@ Put INI file in the same folder as tnsnames.ora file.
   package My::Connect::Oracle;
   use base qw{DBIx::Array::Connect};
   use Path::Class qw{};
-  sub path {[Path::Class::dir($ENV{"ORACLE_HOME"}, "network", "admin")]};
+  sub path {[Path::Class::dir($ENV{"ORACLE_HOME"}, qw{network admin})]}; #not taint safe
 
 =cut
 
@@ -262,7 +268,7 @@ sub cfg {
 
 =head2 Section
 
-The INI section name is value that needs to be passed in the connect method.
+The INI section is the value that needs to be passed in the connect method which is the database nickname.
 
   [section]
 
@@ -277,7 +283,7 @@ Examples:
   connection=DBI:CSV:f_dir=.
   connection=DBI:mysql:database=mydb;host=myhost.mydomain.tld
   connection=DBI:Sybase:server=mssqlserver.mydomain.tld;datasbase=mydb
-  connection=DBI:Oracle:DBTNSNAME
+  connection=DBI:Oracle:MYTNSNAME
 
 =head2 user
 
@@ -289,7 +295,7 @@ The string passed to DBI as the password.  Default is "" for password-less drive
 
 =head2 options
 
-Parsed and passed as a hash reference to DBI->connect.
+Split and passed as a hash reference to DBI->connect.
 
   options=AutoCommit=>1, RaiseError=>1, ReadOnly=>1
 
@@ -348,7 +354,30 @@ The full text of the license can be found in the LICENSE file included with this
 
 =head1 SEE ALSO
 
-L<DBIx::Array>, L<Config::IniFiles>
+=head2 The Building Blocks
+
+L<DBIx::Array>, L<Config::IniFiles>, L<Path::Class>
+
+=head2 The Competition
+
+L<DBIx::MyPassword> uses a CSV file to store data. The constructor is wrapper around DBI->connect.
+
+  my $dbh = DBIx::MyPassword->connect("user");
+
+L<DBIx::PasswordIniFile> uses an INI file to store data. It uses encrypted passwords and the constructor returns array reference to feed into DBI->connect.
+
+  my $dbh = DBI->connect(@{DBIx::PasswordIniFile->new(%arg)->getDBIConnectParams})
+
+L<DBIx::Password> uses and internal hash reference to store data.  The constructor is wrapper around DBI->connect. 
+
+  my $dbh = DBIx::Password->connect("user");
+
+=head2 The Comparison
+
+L<DBIx::Array::Connect> uses an INI file to store data.  The constructor returns a L<DBIx::Array> object which is a wrapper around DBI.
+
+  my $dbx = DBIx::Array::Connect->new->connect("nickname");
+  my $dbh = $dbx->dbh; #if you don't want to use DBIx::Array...
 
 =cut
 

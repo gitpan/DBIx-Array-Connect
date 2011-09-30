@@ -1,5 +1,9 @@
 Revision history for Perl module DBIx::Array::Connect
 
+0.03 2011-09-29
+  - Updated Documentation for CPAN
+  - Added test pod.t kwalitee.t changes.t pod-coverage.t to SVN
+
 0.02 2011-09-05
   - Added class method
   - Default to DBIx::Array instead of DBIx::Array::Export

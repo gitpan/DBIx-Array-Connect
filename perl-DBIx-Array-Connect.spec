@@ -1,5 +1,5 @@
 Name:           perl-DBIx-Array-Connect
-Version:        0.02
+Version:        0.03
 Release:        1%{?dist}
 Summary:        Database connections from a configuration file
 License:        gplv2

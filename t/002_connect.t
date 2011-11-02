@@ -14,7 +14,7 @@ isa_ok($dac, 'DBIx::Array::Connect');
 SKIP: {
   my $driver="DBD::CSV";
   eval "require $driver";
-  skip "Database driver $driver not installed", 3 if $@;
+  skip "Database driver $driver not installed", 4 if $@;
 
   my $dbx=$dac->connect("db1");
   isnt(ref($dbx), "DBIx::Array::Export");

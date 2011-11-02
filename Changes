@@ -1,8 +1,13 @@
 Revision history for Perl module DBIx::Array::Connect
 
+0.04 2011-11-01
+  - Fixed SKIP for DBD::CSV had wrong count
+    - From: Marc Alexander Lehmann (2011-09-30T15:26:43)
+    - perl -MDevel::Hide=DBD::CSV -Mblib t/002_connect.t
+
 0.03 2011-09-29
   - Updated Documentation for CPAN
-  - Added test pod.t kwalitee.t changes.t pod-coverage.t to SVN
+  - Added tests pod.t kwalitee.t changes.t pod-coverage.t to SVN
 
 0.02 2011-09-05
   - Added class method

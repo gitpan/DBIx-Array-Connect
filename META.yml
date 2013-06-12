@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                DBIx-Array-Connect
-version:             0.04
+version:             0.05
 abstract:            Database Connections from an INI Configuration File
 license:             ~
 author:              

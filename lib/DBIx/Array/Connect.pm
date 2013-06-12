@@ -5,7 +5,7 @@ use base qw{Package::New};
 use Config::IniFiles qw{};
 use Path::Class qw{};
 
-our $VERSION='0.04';
+our $VERSION='0.05';
 
 =head1 NAME
 
@@ -166,14 +166,11 @@ sub file {
     die(sprintf(qq{Error: Cannot read file "%s".}, $self->{'file'})) unless -r $self->{'file'};
   }
   unless (defined $self->{'file'}) {
-    if (ref($self->path) eq "ARRAY") {
-      foreach my $path (@{$self->path}) {
-        $self->{"file"}=Path::Class::file($path, $self->basename);
-        last if -r $self->{"file"};
-      }
-    } else {
-      die(sprintf(qq{Error: path method returned a "%s"; expecting an array reference.}, ref($self->{"file"})))
-        unless $self->path eq "ARRAY";
+    die(sprintf(qq{Error: path method returned a "%s"; expecting an array reference.}, ref($self->path)))
+      unless ref($self->path) eq "ARRAY";
+    foreach my $path (@{$self->path}) {
+      $self->{"file"}=Path::Class::file($path, $self->basename);
+      last if -r $self->{"file"};
     }
   }
   #We may not have a vaild file here?  We'll let Config::IniFiles catch the error.
